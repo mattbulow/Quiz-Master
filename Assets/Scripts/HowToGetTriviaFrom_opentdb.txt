@@ -1,0 +1,13 @@
+
+// View categories
+https://opentdb.com/api_category.php
+
+// get info about categories
+https://opentdb.com/api_count.php?category=15
+
+Example: get 10 easy multiple choise questions from the VideoGame category:
+https://opentdb.com/api.php?amount=10&difficulty=easy&type=multiple&category=15
+
+Would be cool if game was able to grab 10 new trivia questions from opentdb.com based on user input:
+difficulty: any,easy,med,hard
+category: all or specific
