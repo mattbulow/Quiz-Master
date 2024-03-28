@@ -1,27 +1,49 @@
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class Quiz : MonoBehaviour
 {
+    [Header("Questions")]
     [SerializeField] private QuestionSO question;
     [SerializeField] private TextMeshProUGUI questionText;
 
+    [Header("Answers")]
     [SerializeField] private GameObject[] answerButtons;
 
-    int correctAnswerIdx;
-
+    [Header("Button Colors")]
     [SerializeField] private Sprite defaultAnswerSprite;
     [SerializeField] private Sprite correctAnswerSprite;
 
+    [Header("Timers")]
+    [SerializeField] Image timerImage;
+    [SerializeField] Timer timer;
+
+
+    // non serialized fields
+    private bool isAnsweringQuestion = true;
 
     void Start()
     {
         GetNextQuestion();
-        //DisplayQuestion();
     }
 
-    public void OnAnswerSelected(int idxOfSelectedButton)
+    void Update()
+    {
+        // If we are answering a question and time is up, then display correct answer and reset timer
+        if (isAnsweringQuestion && timer.GetTimeUp())
+        {
+            OnAnswerSelected(-1);
+        }
+        // If we are reviewing a question and time is up, then get next question (which will reset timer)
+        else if (!isAnsweringQuestion && timer.GetTimeUp())
+        {
+            GetNextQuestion();
+        }
+    }
+
+    private void OnAnswerSelected(int idxOfSelectedButton)
     {
         Image correctAnswerButtonImage = answerButtons[question.GetCorrectAnswerIndex()].GetComponent<Image>();
         if (correctAnswerButtonImage == null) { Debug.LogError("correctAnswerButtonImage is NULL"); }
@@ -32,16 +54,21 @@ public class Quiz : MonoBehaviour
         {
             questionText.text = "Good job!, \"" + correctAnswerString + "\" is CORRECT!";
         }
-        else
+        else if (idxOfSelectedButton == -1)
+        {
+            questionText.text = "Sorry, time is up! The correct answer was: \"" + correctAnswerString + "\"";
+        } else
         {
             questionText.text = "Sorry, \"" +
                 answerButtons[idxOfSelectedButton].GetComponentInChildren<TextMeshProUGUI>().text +
-                "\" is INCORRECT, the correct answer is: \"" +
+                "\" is INCORRECT, the correct answer was: \"" +
                 correctAnswerString + "\"";
         }
 
         correctAnswerButtonImage.sprite = correctAnswerSprite;
         SetAnswerButtonsState(false);
+        isAnsweringQuestion = false;
+        timer.ResetTimer(isAnsweringQuestion);
     }
 
     private void GetNextQuestion()
@@ -49,6 +76,8 @@ public class Quiz : MonoBehaviour
         SetAnswerButtonsState(true);
         SetDefaultButtonSprites();
         DisplayQuestion();
+        isAnsweringQuestion = true;
+        timer.ResetTimer(isAnsweringQuestion);
     }
     private void DisplayQuestion()
     {
