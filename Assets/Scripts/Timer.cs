@@ -10,7 +10,7 @@ public class Timer : MonoBehaviour
 
     [SerializeField] private Image timerImage;
     private bool pause = false;
-    private bool timeUp = false;
+    private bool timeUp = true;
 
     private void Start()
     {
