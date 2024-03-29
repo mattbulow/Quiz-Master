@@ -25,22 +25,40 @@ public class Quiz : MonoBehaviour
     [SerializeField] Image timerImage;
     [SerializeField] Timer timer;
 
+    [Header("Score Keeper")]
+    [SerializeField] private ScoreKeeper scoreKeeper;
+
+    [Header("Progress Bar")]
+    [SerializeField] private Slider slider;
+
     // non serialized fields
     private bool isAnsweringQuestion = false;
     private bool gettingQuestionDataOngoing = true;
+    public bool IsGameComplete { get; private set; } = false;
+
+    public void RestartGame()
+    {
+        gettingQuestionDataOngoing = true;
+        currentQuestionIdx = 0;
+        IsGameComplete = false;
+        scoreKeeper.ResetScore();
+        StartCoroutine(GetQuestionsFromWeb());
+    }
 
     void Start()
     {
-        currentQuestion = new QuestionSO();
+        currentQuestion = ScriptableObject.CreateInstance<QuestionSO>();
         Debug.Log("currentQuestion == null: " + currentQuestion == null);
+        gettingQuestionDataOngoing = true;
         StartCoroutine(GetQuestionsFromWeb());
-        //while (coroutine != null) { } // wait until coroutine finishes
     }
 
     void Update()
     {
         if (gettingQuestionDataOngoing)
         {
+            //TODO: display some text like: downloading questions from opentdb.com...
+            // might want to do this in the coroutine...
             return;
         }
 
@@ -50,19 +68,20 @@ public class Quiz : MonoBehaviour
             OnAnswerSelected(-1);
         }
         // If we are reviewing a question and time is up, then get next question (which will reset timer)
-        else if (!isAnsweringQuestion && timer.GetTimeUp())
+        else if (!isAnsweringQuestion && (timer.GetTimeUp() || Input.GetMouseButtonDown(0)) )
         {
+            // when clicking mouse, skip to next question
             if (currentQuestionIdx < questionDataJson.results.Length)
             {
                 GetNextQuestion();
             } else
             {
-                Debug.Log("End of Game");
+                IsGameComplete = true;
             }
         }
     }
 
-    private void OnAnswerSelected(int idxOfSelectedButton)
+    public void OnAnswerSelected(int idxOfSelectedButton)
     {
         Image correctAnswerButtonImage = answerButtons[currentQuestion.GetCorrectAnswerIndex()].GetComponent<Image>();
         if (correctAnswerButtonImage == null) { Debug.LogError("correctAnswerButtonImage is NULL"); }
@@ -72,27 +91,33 @@ public class Quiz : MonoBehaviour
         if (idxOfSelectedButton == currentQuestion.GetCorrectAnswerIndex())
         {
             questionText.text = "Good job!, \"" + correctAnswerString + "\" is CORRECT!";
+            scoreKeeper.IncrementAnswers(true);
         }
         else if (idxOfSelectedButton == -1)
         {
             questionText.text = "Sorry, time is up! The correct answer was: \"" + correctAnswerString + "\"";
+            scoreKeeper.IncrementAnswers(false);
         } else
         {
             questionText.text = "Sorry, \"" +
                 answerButtons[idxOfSelectedButton].GetComponentInChildren<TextMeshProUGUI>().text +
                 "\" is INCORRECT, the correct answer was: \"" +
                 correctAnswerString + "\"";
+            scoreKeeper.IncrementAnswers(false);
         }
 
         correctAnswerButtonImage.sprite = correctAnswerSprite;
+
         SetAnswerButtonsState(false);
         isAnsweringQuestion = false;
         timer.ResetTimer(isAnsweringQuestion);
     }
 
+    private void SetAnswerButtonsStateTrue() { SetAnswerButtonsState(true); }
+
     private void GetNextQuestion()
     {
-        SetAnswerButtonsState(true);
+        Invoke("SetAnswerButtonsStateTrue",0.25f); // this is to prevent OnClick() of a button occurring when skipping the review part of a question
         SetDefaultButtonSprites();
         currentQuestion.UpdateQuestion(questionDataJson.results[currentQuestionIdx]);
         //currentQuestion.UpdateQuestion
@@ -100,6 +125,7 @@ public class Quiz : MonoBehaviour
         isAnsweringQuestion = true;
         timer.ResetTimer(isAnsweringQuestion);
         currentQuestionIdx++;
+        slider.value = currentQuestionIdx;
     }
 
     private void DisplayQuestion()
@@ -130,10 +156,22 @@ public class Quiz : MonoBehaviour
         }
     }
 
+    private void ClearAnswerButtonText()
+    {
+        for (int n = 0; n < answerButtons.Length; n++)
+        {
+            TextMeshProUGUI text = answerButtons[n].GetComponentInChildren<TextMeshProUGUI>();
+            text.text = "";
+        }
+    }
+
 
     IEnumerator GetQuestionsFromWeb()
     {
-        gettingQuestionDataOngoing = true;
+        // display getting data from internet and clear button text
+        questionText.text = "Retrieving trivia question from opentdb.com";
+        ClearAnswerButtonText();
+
         //int numberOfQuestions = 2;
         UnityWebRequest www = UnityWebRequest.Get("https://opentdb.com/api.php?amount=10&difficulty=easy&type=multiple&category=15");
         yield return www.SendWebRequest();
@@ -146,6 +184,13 @@ public class Quiz : MonoBehaviour
         {
             questionDataJson = JsonUtility.FromJson<TriviaQuestionsJson>(www.downloadHandler.text);
         }
+
+        // this needs to be here or else questionDataJson will be empty
+        slider.minValue = 0;
+        slider.maxValue = questionDataJson.results.Length;
+        slider.value = 1;
+
         gettingQuestionDataOngoing = false;
     }
+
 }
