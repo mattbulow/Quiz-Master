@@ -120,7 +120,6 @@ public class Quiz : MonoBehaviour
         Invoke("SetAnswerButtonsStateTrue",0.25f); // this is to prevent OnClick() of a button occurring when skipping the review part of a question
         SetDefaultButtonSprites();
         currentQuestion.UpdateQuestion(questionDataJson.results[currentQuestionIdx]);
-        //currentQuestion.UpdateQuestion
         DisplayQuestion();
         isAnsweringQuestion = true;
         timer.ResetTimer(isAnsweringQuestion);
@@ -169,7 +168,7 @@ public class Quiz : MonoBehaviour
     IEnumerator GetQuestionsFromWeb()
     {
         // display getting data from internet and clear button text
-        questionText.text = "Retrieving trivia question from opentdb.com";
+        questionText.text = "Retrieving trivia questions from opentdb.com";
         ClearAnswerButtonText();
 
         //int numberOfQuestions = 2;
